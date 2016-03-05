@@ -1,0 +1,540 @@
+#!/bin/sh
+
+wel_file='./welcomemsg'
+newgame='./newgame'
+game='./game'
+game1='./game1'
+game2='./game2'
+game3='./game3'
+game4='./game4'
+game5='./game5'
+inputs='./inputs'
+
+#success=0
+stops=0
+moveDir='none'
+target=0
+col_num=0
+temp=0
+
+col1=0
+col2=0
+col3=0
+col4=0
+
+board00=0
+board01=0
+board02=0
+board03=0
+board10=0
+board11=0
+board12=0
+board13=0
+board20=0
+board21=0
+board22=0
+board23=0
+board30=0
+board31=0
+board32=0
+board33=0
+
+
+base="col"
+board_temp=0
+
+random=0
+counter=0
+lose=0
+
+game_finish=0
+
+generate_rand(){
+
+random=$(head -200 /dev/urandom | cksum | awk '{print $1}')
+random=$((random%16))
+
+}
+
+
+check_lose(){
+counter=0
+for j in 0 1 2 3
+do
+for i in 0 1 2 3
+do
+        current=board$i$j;
+        current=$(eval echo \$$current)
+	if [ $current -ne 0 ]; then
+	counter=`expr $counter + 1`
+		if [ $counter -eq 16 ]; then
+			lose=1
+		fi
+	fi
+	if [ $current -eq 64 ]; then
+	game_finish=1
+	fi
+done
+done
+
+}
+
+
+add_new(){
+generate_rand
+for j in 0 1 2 3
+do
+for i in 0 1 2 3
+do
+#	echo $random
+        current=board$i$j;
+        current=$(eval echo \$$current)
+#	echo $current
+	if [ $random -ne 0 ]
+	then
+	random=`expr $random - 1`
+	else  ##random is 0
+		if [ $current -eq 0 ]
+		then
+		eval board$i$j=2
+#		update_board
+		currentGame
+		else
+		add_new
+		fi
+	fi
+done
+done
+}
+
+
+set_board(){ #stores file into variable
+for j in 0 1 2 3
+do
+for i in 0 1 2 3
+do
+row=`expr $i + 1`
+col=`expr $j + 1`
+
+eval board$j$i=$(awk '{print $'$col'}' game | awk 'NR=='$row'')
+done
+done
+}
+
+
+update_board(){ #stores variable into file
+>game
+for j in 0 1 2 3
+do
+for i in 0 1 2 3
+do
+        current=board$i$j;
+        echo -n  $(eval echo \$$current)' ' >> game
+done
+echo >> game
+done
+generate_board
+}
+
+
+generate_board(){
+>gboard
+top=0
+
+#while [ $top -ne 25 ]; do
+echo -n "~~~~~~~~~~~~~~~~~~~~~~~~~" >> gboard
+#top=`expr $top + 1`
+#done
+
+echo >> gboard
+
+for j in 0 1 2 3
+do
+
+tol_count=0
+#top=0
+
+#######while [ $tol_count -ne 3 ]; do
+
+#while [ $top -ne 25 ]; do
+
+#if [ $((top%6)) -eq 0 ]; then
+echo  "~     ~     ~     ~     ~" >> gboard
+#else
+#echo -n " " >> gboard
+#fi
+#top=`expr $top + 1`
+#done
+
+#echo >> gboard
+
+#top=0
+###############tol_count=`expr $tol_count + 1`
+###########done
+
+echo -n "~" >> gboard
+
+for i in 0 1 2 3
+do
+#	gap=0
+#	while [ $gap -ne 6 ]; do
+#	if [ $((gap%6)) -eq 0 ]; then
+#	echo -n "~" >> gboard
+#	else
+#		if [ $((gap%6)) -eq 5 ]; then
+		current=board$i$j;
+        	echo -n "  " $(eval echo \$$current)" ~" >> gboard
+#		else
+#		echo -n " " >> gboard
+#		fi
+#	fi
+#	gap=`expr $gap + 1`
+#	done	
+done
+echo >> gboard
+echo  "~     ~     ~     ~     ~" >> gboard
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~" >> gboard
+#buff=0
+#while [ $buff -ne 25 ]; do
+#echo -n "~" >> gboard
+#buff=`expr $buff + 1`
+#done
+#echo >> gboard
+
+done
+game='./gboard'
+}
+
+
+
+test_board(){
+for j in 0 1 2 3
+do
+for i in 0 1 2 3
+do
+        current=board$i$j;
+        echo -n  $(eval echo \$$current)' '
+done
+echo
+done
+}
+
+
+
+
+
+#trap "rm -f $tempfile1 $tempfile2 $tempfile3" 0 1 2 5 15
+
+rotate_board(){
+i=0
+j=0
+while [ $i -lt 2 ]; do
+        j=$i
+        while [ $j -lt `expr 3 - $i` ]; do
+               eval temp=\$board$i$j;
+               eval board$i$j=\$board$j`expr 3 - $i`;
+               eval board$j`expr 3 - $i`=\$board`expr 3 - $i``expr 3 - $j`;
+               eval board`expr 3 - $i``expr 3 - $j`=\$board`expr 3 - $j`$i;
+               eval board`expr 3 - $j`$i=$temp;
+                j=`expr $j + 1`
+         done
+        i=`expr $i + 1`
+done
+#update_board
+}
+
+
+
+
+
+
+findTarget() {
+if [ $slide_loop -eq 0 ]; then
+target=$slide_loop
+return;
+fi
+
+target=`expr $slide_loop - 1`
+while [ $target -ge 0 ]; do
+eval iftemp=\$board$col_num$target
+	if [ $iftemp -ne 0 ]; then
+		eval iftemp2=\$board$col_num$slide_loop 
+			if [ $iftemp -ne $iftemp2 ]; then
+			target=`expr $target + 1`;
+			return;
+			else
+			target=$target
+			return	
+			fi
+	else 
+		if [ $target -eq $stops ]; then
+			target=$target
+			return;
+		fi
+	fi
+target=`expr $target - 1`
+done
+target=$slide_loop
+}
+	
+
+
+
+slideArray() {
+slide_loop=0
+target=0
+stops=0
+#success=0
+while [ $slide_loop -lt 4 ]
+do
+eval iftemp=\$board$col_num$slide_loop  ##############################################
+  if [ $iftemp -ne 0 ]
+  then
+	findTarget
+     if [ $slide_loop -ne $target ]; then
+eval iftemp=\$board$col_num$target #####################################
+	if [ $iftemp -eq 0 ]
+	then
+#echo testing
+	eval board$col_num$target=\$board$col_num$slide_loop 
+	eval eliftemp1=\$board$col_num$target #############################################3
+	eval eliftemp2=\$board$col_num$slide_loop ###########################################
+	elif [ $eliftemp1 -eq $eliftemp2 ]
+	then
+	eval target_temp=\$board$col_num$target
+	eval board$col_num$target=`expr $target_temp \* 2`	
+#echo testing2
+	stops=`expr $target + 1`
+	#echo test
+	fi
+
+	eval board$col_num$slide_loop=0
+	#success=1
+     fi
+  fi
+slide_loop=`expr $slide_loop + 1`
+done  
+}
+
+read_char() {
+  stty -icanon -echo
+  eval "$1=\$(dd bs=1 count=1 2>/dev/null)"
+  stty icanon echo
+}
+
+
+
+newGame () {
+   lose=0
+   game_finish=0
+  cp newgame game
+   set_board
+   currentGame
+}
+
+moveUp () {
+   #dialog --infobox "Up pressed" 40 60
+#   echo "Up pressed" > game
+#   success=false
+   for i in 0 1 2 3
+   do
+   col_num=$i
+   slideArray
+   done	
+
+   #update_board
+}
+
+
+moveDown () {
+   #dialog --infobox "Down pressed" 40 60
+  # echo "Down pressed" > game
+ #  success=false
+   rotate_board
+   rotate_board
+   moveUp
+   rotate_board
+   rotate_board
+}
+
+
+moveLeft () {
+ #  dialog --infobox "Left pressed" 40 60
+  # echo "Left pressed" > game
+ 
+  rotate_board
+   moveUp
+   rotate_board
+   rotate_board
+   rotate_board
+
+}
+
+moveRight () {
+ #  dialog --infobox "Right pressed" 40 60
+  # echo "Right pressed" > game
+   rotate_board
+   rotate_board
+   rotate_board
+   moveUp
+   rotate_board
+}
+
+currentGame () {
+while [ 1 ]; do
+   update_board 
+  # test_board
+  # update_board
+   check_lose
+   if [ $lose -eq 1 ]; then
+	endgame
+   fi
+   if [ $game_finish -eq 1 ]; then
+	finishgame
+   fi
+  gameText=$(cat $game)
+   cat $game
+   dialog --no-collapse --infobox "$gameText" 40 60
+   read_char choice
+   retv=$?
+  # choice=$(cat $inputs)
+   [ $retv -eq 1 -o $retv -eq 255 ] && exit
+
+   case $choice in
+        w|W) moveUp;;
+        a|A) moveLeft;;
+        s|S) moveDown;;
+        d|D) moveRight;;
+        q|Q) menu ;;
+   esac
+ #  echo test rand
+   add_new
+done
+}
+
+endgame () {
+
+  gameText=$(cat $endgameText)
+   dialog --infobox "$gameText" 40 60
+   read_char choice2
+   retv=$?
+  # choice=$(cat $inputs)
+   [ $retv -eq 1 -o $retv -eq 255 ] && exit
+
+   case $choice2 in
+        *) menu ;;
+   esac
+
+}
+
+
+finishgame () {
+
+  gameText=$(cat $finishgameText)
+   dialog --infobox "$gameText" 40 60
+   read_char choice3
+   retv=$?
+  # choice=$(cat $inputs)
+   [ $retv -eq 1 -o $retv -eq 255 ] && exit
+
+   case $choice2 in
+        *) menu ;;
+   esac
+
+}
+
+
+loadGame () {
+
+ dialog --title "Load Game" \
+           --menu "Please choose an option:" 15 55 5 \
+                   1 "Game 1" \
+                   2 "Game 2" \
+                   3 "Game 3" \
+                   4 "Game 4" \
+                   5 "Game 5" 2> $inputs
+   retv=$?
+   choice=$(cat $inputs)
+   [ $retv -eq 1 -o $retv -eq 255 ] && exit
+
+   case $choice in
+       1) cp game1 game
+  	 lose=0
+   	game_finish=0
+	  set_board	  
+          currentGame
+           ;;
+       2) cp game2 game
+	   lose=0
+	   game_finish=0
+	  set_board	  
+          currentGame ;;
+       3) cp game3 game
+	   lose=0
+	   game_finish=0
+	  set_board	  
+          currentGame ;;
+       4) cp game4 game
+	   lose=0
+	   game_finish=0
+	  set_board	  
+	  currentGame ;;
+       5) cp game5 game
+	   lose=0
+	   game_finish=0
+	  set_board	  
+          currentGame ;;
+   esac
+}
+
+saveGame () {
+	cp game4 game5
+	cp game3 game4
+	cp game2 game3
+	cp game1 game2
+	cp game game1
+	dialog --msgbox 'Your Game progress have been saved.' 15 60
+}
+
+
+welcome () {
+   dialog  --textbox $wel_file 25 60	
+}
+
+menu (){
+ dialog --title "2048" \
+           --menu "Please choose an option:" 15 55 5 \
+                   N "New Game - Start a new 2048 game" \
+                   R "Resume - Resume previous game" \
+                   L "Load - Load form previous saved game" \
+                   S "Save - Save current game state" \
+                   Q "Quit"  2> $inputs
+
+   retv=$?
+   choice=$(cat $inputs)
+   [ $retv -eq 1 -o $retv -eq 255 ] && exit
+
+   case $choice in
+       n|N) newGame
+          menu
+           ;;
+       r|R) currentGame
+          menu ;;
+       l|L) loadGame
+          menu ;;
+       s|S) saveGame
+          menu ;;
+       q|Q) exit ;;
+   esac
+
+}
+
+
+main () {
+   endgameText='./endgameText'   
+   finishgameText='./finishgameText'
+   welcome
+   menu
+}
+
+main
